@@ -30,20 +30,17 @@ pnpm add -D vite-plugin-cpanel-ssl
 
 ## Basic Usage
 
-> [!TIP]
-> Remember that you'll need to pass a domain name in your `server.https.host` option that matches the domain on your SSL certificates
-
 Simply import the plugin and add it to your Vite config plugins array:
 
 ```js
 import cPanelSSL from "vite-plugin-cpanel-ssl";
 
 export default {
-  plugins: [
-    cPanelSSL({
-      domain: "my-domain.com",
-    }),
-  ],
+	plugins: [
+		cPanelSSL({
+			domain: "my-domain.com",
+		}),
+	],
 };
 ```
 
