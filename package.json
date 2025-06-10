@@ -1,0 +1,56 @@
+{
+	"name": "vite-plugin-cpanel-ssl",
+	"type": "module",
+	"version": "1.0.0",
+	"packageManager": "pnpm@10.11.0",
+	"description": "Automatically use your cPanel SSL certs and keys for the Vite dev server",
+	"author": "Craig Riley <c.riley@evomark.co.uk>",
+	"license": "MIT",
+	"funding": "https://github.com/sponsors/craigrileyuk",
+	"homepage": "https://github.com/evo-mark/vite-plugin-cpanel-ssl#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/evo-mark/vite-plugin-cpanel-ssl.git"
+	},
+	"bugs": {
+		"url": "https://github.com/evo-mark/vite-plugin-cpanel-ssl/issues"
+	},
+	"keywords": [
+		"vite",
+		"vite-plugin",
+		"dev",
+		"whm",
+		"cpanel",
+		"ssl",
+		"secure"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"checks": "pnpm lint && pnpm typecheck"
+	},
+	"peerDependencies": {
+		"vite": "^6.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.15.21",
+		"ts-node": "^10.9.2",
+		"tsup": "^8.5.0",
+		"typescript": "^5.8.3",
+		"vite": "^6.3.5"
+	}
+}
