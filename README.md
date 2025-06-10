@@ -39,11 +39,11 @@ Simply import the plugin and add it to your Vite config plugins array:
 import cPanelSSL from "vite-plugin-cpanel-ssl";
 
 export default {
-	plugins: [
-		cPanelSSL({
-			domain: "my-domain.com",
-		}),
-	],
+  plugins: [
+    cPanelSSL({
+      domain: "my-domain.com",
+    }),
+  ],
 };
 ```
 
