@@ -2,7 +2,7 @@
 	"name": "vite-plugin-cpanel-ssl",
 	"type": "module",
 	"version": "1.0.0",
-	"packageManager": "pnpm@10.11.0",
+	"packageManager": "pnpm@10.12.1+sha512.f0dda8580f0ee9481c5c79a1d927b9164f2c478e90992ad268bbb2465a736984391d6333d2c327913578b2804af33474ca554ba29c04a8b13060a717675ae3ac",
 	"description": "Automatically use your cPanel SSL certs and keys for the Vite dev server",
 	"author": "Craig Riley <c.riley@evomark.co.uk>",
 	"license": "MIT",
@@ -47,7 +47,12 @@
 		"vite": "^6.0.0"
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.28.0",
 		"@types/node": "^22.15.21",
+		"eslint": "^9.28.0",
+		"eslint-config-prettier": "^10.1.5",
+		"globals": "^16.2.0",
+		"prettier": "^3.5.3",
 		"ts-node": "^10.9.2",
 		"tsup": "^8.5.0",
 		"typescript": "^5.8.3",
