@@ -69,7 +69,8 @@ export default function vitePluginCPanelSsl(userConfig: Partial<UserConfig> = {}
 	return {
 		name: "vite-plugin-cpanel-ssl",
 		config: async (config, env) => {
-			if (env.mode === "production" || userConfig.enable !== true) return;
+			const isEnabled = typeof userConfig.enable === "function" ? userConfig.enable() : userConfig.enable;
+			if (env.mode === "production" || isEnabled !== true) return;
 
 			const homeDir = process.env.HOME;
 			if (!homeDir) {
