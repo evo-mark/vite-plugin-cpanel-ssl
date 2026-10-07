@@ -1,6 +1,7 @@
+import "reflect-metadata";
 import { readFile, readdir } from "node:fs/promises";
 import { join, basename } from "node:path";
-import { X509Certificate } from '@peculiar/x509';
+import { SubjectAlternativeNameExtension, X509Certificate } from "@peculiar/x509";
 import { type Plugin } from "vite";
 
 interface UserConfig {
@@ -21,36 +22,45 @@ interface ProcessedCertificateFile {
 			not_after: Date;
 			domains: string[];
 			is_self_signed: boolean;
-		}
-	}
+		};
+	};
 }
 
 function parseUserConfig(userConfig: Partial<UserConfig>): UserConfig {
-	userConfig.enable ??= true;
-	userConfig.allowedIps ??= [];
+	const resolvedConfig = { ...userConfig };
+	resolvedConfig.enable ??= true;
+	resolvedConfig.allowedIps ??= [];
 
-	return userConfig as UserConfig;
+	return resolvedConfig as UserConfig;
 }
 
 function extractFilenameHash(filename: string): string | null {
 	const name = basename(filename, ".crt");
-	const parts = name.split("_");
 
-	// Heuristic: domain parts are usually alphabetic, hash parts include hex/numbers
-	let boundaryIndex = parts.findIndex((part: string) => /[0-9a-f]{4,}/i.test(part));
-	if (boundaryIndex === -1) return null;
+	// cPanel names certs <domain>_<hex>_<hex>_<timestamp>_<hash>, and the key starts with the <hex>_<hex> pair.
+	// Match from the end so hex-looking domain parts (e.g. "cafe_com") aren't mistaken for the pair.
+	const match = name.match(/_([0-9a-f]+_[0-9a-f]+)_\d+_[0-9a-f]+$/i);
+	return match?.[1] ?? null;
+}
 
-	const uniqueParts = parts.slice(boundaryIndex, boundaryIndex + 2).join("_");
-	return uniqueParts;
+function domainMatches(san: string, domain: string): boolean {
+	san = san.toLowerCase();
+	domain = domain.toLowerCase();
+	if (san === domain) return true;
+
+	// A wildcard covers exactly one label, so *.example.com matches dev.example.com but not example.com or a.b.example.com
+	if (!san.startsWith("*.")) return false;
+	const firstDot = domain.indexOf(".");
+	return firstDot > 0 && domain.slice(firstDot) === san.slice(1);
 }
 
 function processCertFiles(certFile: CertificateFile): ProcessedCertificateFile {
 	const cert = new X509Certificate(certFile.contents);
-	const dnsNames = cert.extensions
-		.find(ext => ext.type === '2.5.29.17')
-		?.toString() ?? ""
-  	const parsedDomainResults = dnsNames.matchAll(/^\s+DNS:([\w\.\s]+)$/gm);
-	const parsedDomains = Array.from(parsedDomainResults).map(dom => dom.at(-1)?.trim()).filter(item => typeof item !== "undefined")
+	const parsedDomains =
+		cert
+			.getExtension(SubjectAlternativeNameExtension)
+			?.names.items.filter((name) => name.type === "dns")
+			.map((name) => name.value) ?? [];
 
 	const processedCertFile: ProcessedCertificateFile = {
 		path: certFile.path,
@@ -58,20 +68,21 @@ function processCertFiles(certFile: CertificateFile): ProcessedCertificateFile {
 			parsed: {
 				is_self_signed: cert.subject === cert.issuer,
 				domains: parsedDomains,
-				not_after: new Date(cert.notAfter)
-			}
-		}
-	}
+				not_after: new Date(cert.notAfter),
+			},
+		},
+	};
 
 	return processedCertFile;
 }
 
 export default function vitePluginCPanelSsl(userConfig: Partial<UserConfig> = {}): Plugin {
-	userConfig = parseUserConfig(userConfig);
+	const resolvedConfig = parseUserConfig(userConfig);
 	return {
 		name: "vite-plugin-cpanel-ssl",
 		config: async (config, env) => {
-			const isEnabled = typeof userConfig.enable === "function" ? userConfig.enable() : userConfig.enable;
+			const isEnabled =
+				typeof resolvedConfig.enable === "function" ? resolvedConfig.enable() : resolvedConfig.enable;
 			if (env.mode === "production" || isEnabled !== true) return;
 
 			const homeDir = process.env.HOME;
@@ -97,12 +108,13 @@ export default function vitePluginCPanelSsl(userConfig: Partial<UserConfig> = {}
 						return (
 							data.not_after >= new Date() &&
 							!data.is_self_signed &&
-							(!userConfig.domain || contents.parsed.domains.includes(userConfig.domain))
+							(!resolvedConfig.domain ||
+								data.domains.some((san) => domainMatches(san, resolvedConfig.domain)))
 						);
 					});
 				})
 				.then((certFiles) => certFiles[0]?.path)
-				.catch(err => {
+				.catch((err) => {
 					console.error(err);
 					return null;
 				});
@@ -138,21 +150,21 @@ export default function vitePluginCPanelSsl(userConfig: Partial<UserConfig> = {}
 			};
 
 			if (!config.server.host) {
-				config.server.host = userConfig.domain;
+				config.server.host = resolvedConfig.domain;
 			}
 		},
 		configureServer(server) {
-			if (!userConfig.allowedIps?.length) {
+			if (!resolvedConfig.allowedIps.length) {
 				return;
 			}
 
 			server.httpServer?.on("connection", (socket) => {
 				const ip = socket.remoteAddress?.replace(/^::ffff:/, "");
-				if (!userConfig.allowedIps.includes(ip)) {
+				if (!ip || !resolvedConfig.allowedIps.includes(ip)) {
 					server.config.logger.info(`[cPanel SSL] Rejected connection from ${ip}`);
 					socket.destroy();
 				}
 			});
-		}
+		},
 	};
 }

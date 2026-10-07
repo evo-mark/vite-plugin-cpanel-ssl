@@ -3,6 +3,7 @@
 		"transpileOnly": true
 	},
 	"compilerOptions": {
+		"ignoreDeprecations": "6.0",
 		"target": "es2020",
 		"lib": ["esnext"],
 		"module": "NodeNext",
