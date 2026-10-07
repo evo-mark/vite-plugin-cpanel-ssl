@@ -6,6 +6,7 @@ import { type Plugin } from "vite";
 interface UserConfig {
 	enable?: boolean | (() => boolean);
 	domain: string;
+	allowedIps: string[];
 }
 
 interface CertificateFile {
@@ -26,6 +27,7 @@ interface ProcessedCertificateFile {
 
 function parseUserConfig(userConfig: Partial<UserConfig>): UserConfig {
 	userConfig.enable ??= true;
+	userConfig.allowedIps ??= [];
 
 	return userConfig as UserConfig;
 }
@@ -139,5 +141,18 @@ export default function vitePluginCPanelSsl(userConfig: Partial<UserConfig> = {}
 				config.server.host = userConfig.domain;
 			}
 		},
+		configureServer(server) {
+			if (!userConfig.allowedIps?.length) {
+				return;
+			}
+
+			server.httpServer?.on("connection", (socket) => {
+				const ip = socket.remoteAddress?.replace(/^::ffff:/, "");
+				if (!userConfig.allowedIps.includes(ip)) {
+					server.config.logger.info(`[cPanel SSL] Rejected connection from ${ip}`);
+					socket.destroy();
+				}
+			});
+		}
 	};
 }
